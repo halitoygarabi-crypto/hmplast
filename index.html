@@ -285,6 +285,38 @@
     </footer>
 
     <script type="module" src="main.js"></script>
+
+    <!-- HM Plast Sesli Asistan - Ayşe -->
+    <script src="https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/dist/vapi.min.js"></script>
+    <style>
+        #hmplast-assistant-btn{position:fixed;bottom:24px;right:24px;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#0056b3,#004494);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,86,179,.4);z-index:9999;display:flex;align-items:center;justify-content:center;transition:all .3s ease;font-size:28px}
+        #hmplast-assistant-btn:hover{transform:scale(1.1)}
+        #hmplast-assistant-btn.active{background:linear-gradient(135deg,#dc3545,#c82333);animation:hmplast-pulse 1.5s infinite}
+        @keyframes hmplast-pulse{0%{box-shadow:0 0 0 0 rgba(220,53,69,.6)}70%{box-shadow:0 0 0 14px rgba(220,53,69,0)}}
+        #hmplast-assistant-status{position:fixed;bottom:96px;right:24px;background:#fff;color:#333;padding:10px 18px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.15);font-family:'Segoe UI',sans-serif;font-size:14px;z-index:9999;display:none;max-width:260px}
+        #hmplast-assistant-status.visible{display:block}
+    </style>
+    <div id="hmplast-assistant-status"></div>
+    <button id="hmplast-assistant-btn" onclick="hmplastToggleCall()" title="Sesli Asistan ile Konusun">🎧</button>
+    <script>
+    (function(){
+        var PK="818a01d5-36c0-4296-90f3-97eb8918b4ba",AID="d6fe8ab1-4e37-432a-acdd-cf970363dd1b",v=null,a=false;
+        function init(){if(v)return;v=new window.Vapi(PK);
+            v.on("call-start",function(){a=true;ui("active","Ayse ile baglanti kuruldu")});
+            v.on("call-end",function(){a=false;ui("idle","")});
+            v.on("speech-start",function(){ui("active","Ayse konusuyor...")});
+            v.on("speech-end",function(){ui("active","Dinleniyor...")});
+            v.on("error",function(){a=false;ui("idle","")});
+        }
+        window.hmplastToggleCall=function(){init();if(a){v.stop();a=false;ui("idle","");}else{ui("connecting","Baglaniliyor...");v.start(AID);}};
+        function ui(s,m){var b=document.getElementById("hmplast-assistant-btn"),t=document.getElementById("hmplast-assistant-status");
+            if(s==="idle"){b.innerHTML="🎧";b.className="";b.id="hmplast-assistant-btn";t.className="";t.id="hmplast-assistant-status";}
+            else if(s==="connecting"){b.innerHTML="⏳";t.textContent=m;t.className="visible";t.id="hmplast-assistant-status";}
+            else{b.innerHTML="✕";b.className="active";b.id="hmplast-assistant-btn";t.textContent=m;t.className="visible";t.id="hmplast-assistant-status";}
+        }
+    })();
+    </script>
+    <!-- /HM Plast Sesli Asistan -->
 </body>
 
 </html>
