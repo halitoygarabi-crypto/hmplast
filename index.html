@@ -287,34 +287,347 @@
     <script type="module" src="main.js"></script>
 
     <!-- HM Plast Sesli Asistan - Ayşe -->
-    <script src="https://cdn.jsdelivr.net/npm/@vapi-ai/web@latest/dist/vapi.min.js"></script>
     <style>
-        #hmplast-assistant-btn{position:fixed;bottom:24px;right:24px;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#0056b3,#004494);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,86,179,.4);z-index:9999;display:flex;align-items:center;justify-content:center;transition:all .3s ease;font-size:28px}
-        #hmplast-assistant-btn:hover{transform:scale(1.1)}
-        #hmplast-assistant-btn.active{background:linear-gradient(135deg,#dc3545,#c82333);animation:hmplast-pulse 1.5s infinite}
-        @keyframes hmplast-pulse{0%{box-shadow:0 0 0 0 rgba(220,53,69,.6)}70%{box-shadow:0 0 0 14px rgba(220,53,69,0)}}
-        #hmplast-assistant-status{position:fixed;bottom:96px;right:24px;background:#fff;color:#333;padding:10px 18px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.15);font-family:'Segoe UI',sans-serif;font-size:14px;z-index:9999;display:none;max-width:260px}
-        #hmplast-assistant-status.visible{display:block}
+        /* FAB Butonu */
+        .ai-fab {
+            position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 2px solid var(--primary, #10b981);
+            cursor: pointer; background: #fff;
+            box-shadow: 0 4px 24px rgba(16, 185, 129, 0.35);
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 0; overflow: hidden;
+        }
+        .ai-fab:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 8px 32px rgba(16,185,129,0.45); }
+        .ai-fab img { width: 48px; height: 48px; object-fit: contain; filter: hue-rotate(-55deg) saturate(2) brightness(0.9); }
+        .ai-fab .ai-fab-glow {
+            position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            border: 2px solid rgba(16, 185, 129, 0.3); animation: ai-pulse 3s infinite ease-out;
+        }
+        .ai-fab .ai-fab-glow:nth-child(2) { animation-delay: 1.5s; }
+        @keyframes ai-pulse { 0% { transform: scale(0.9); opacity: 0.7; } 100% { transform: scale(1.8); opacity: 0; } }
+        .ai-fab.hidden { transform: scale(0); pointer-events: none; }
+
+        /* Chat Paneli */
+        .ai-chat-panel {
+            position: fixed; bottom: 30px; right: 30px; z-index: 10000;
+            width: 380px; max-height: 560px; background: #fff; border-radius: 20px;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+            display: flex; flex-direction: column; overflow: hidden;
+            transform: scale(0) translateY(20px); transform-origin: bottom right;
+            opacity: 0; transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.25s ease;
+            pointer-events: none;
+        }
+        .ai-chat-panel.open { transform: scale(1) translateY(0); opacity: 1; pointer-events: all; }
+
+        /* Header */
+        .ai-chat-header {
+            background: linear-gradient(135deg, var(--primary, #10b981), #059669);
+            color: white; padding: 16px 18px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+        }
+        .ai-chat-header-avatar {
+            width: 42px; height: 42px; border-radius: 50%; background: #fff;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            flex-shrink: 0; border: 2px solid rgba(255,255,255,0.4);
+        }
+        .ai-chat-header-avatar img { width: 34px; height: 34px; object-fit: contain; filter: hue-rotate(-55deg) saturate(2) brightness(0.9); }
+        .ai-chat-header-info { flex: 1; }
+        .ai-chat-header-info h4 { margin: 0; font-size: 15px; font-weight: 600; }
+        .ai-chat-header-info span { font-size: 12px; opacity: 0.85; }
+        .ai-chat-header-actions { display: flex; gap: 6px; align-items: center; }
+        .ai-chat-header-actions button {
+            background: rgba(255,255,255,0.2); border: none; color: white;
+            width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; transition: background 0.2s;
+        }
+        .ai-chat-header-actions button:hover { background: rgba(255,255,255,0.35); }
+        .ai-lang-toggle {
+            font-size: 11px !important; font-weight: 700 !important;
+            width: auto !important; padding: 0 10px !important; letter-spacing: 0.5px;
+        }
+
+        /* Mesaj Alanı */
+        .ai-chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 10px;
+            min-height: 200px; max-height: 340px; background: #f8fafb;
+        }
+        .ai-chat-messages::-webkit-scrollbar { width: 4px; }
+        .ai-chat-messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .ai-msg {
+            max-width: 85%; padding: 10px 14px; border-radius: 16px;
+            font-size: 13.5px; line-height: 1.5; word-wrap: break-word;
+            animation: ai-msg-in 0.3s ease;
+        }
+        @keyframes ai-msg-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .ai-msg.assistant { align-self: flex-start; background: #fff; color: #1e293b; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
+        .ai-msg.user { align-self: flex-end; background: var(--primary, #10b981); color: white; border-bottom-right-radius: 4px; }
+        .ai-msg.system { align-self: center; background: transparent; color: #94a3b8; font-size: 12px; text-align: center; padding: 4px 8px; }
+
+        /* Alt Bar */
+        .ai-chat-footer {
+            padding: 12px 14px; border-top: 1px solid #e5e7eb;
+            display: flex; align-items: center; gap: 8px; background: #fff; flex-shrink: 0;
+        }
+        .ai-chat-input {
+            flex: 1; border: 1px solid #e2e8f0; border-radius: 24px;
+            padding: 10px 16px; font-size: 13.5px; outline: none;
+            background: #f8fafb; transition: border-color 0.2s; font-family: inherit;
+        }
+        .ai-chat-input:focus { border-color: var(--primary, #10b981); }
+        .ai-chat-input::placeholder { color: #94a3b8; }
+        .ai-chat-send, .ai-chat-mic {
+            width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; transition: all 0.2s; flex-shrink: 0;
+        }
+        .ai-chat-send { background: var(--primary, #10b981); color: white; }
+        .ai-chat-send:hover { background: #059669; }
+        .ai-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ai-chat-mic { background: #f1f5f9; color: #64748b; }
+        .ai-chat-mic:hover { background: #e2e8f0; }
+        .ai-chat-mic.recording { background: #ef4444; color: white; animation: ai-mic-pulse 1.5s infinite; }
+        @keyframes ai-mic-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } }
+
+        /* Mobil */
+        @media (max-width: 480px) {
+            .ai-chat-panel { width: calc(100vw - 20px); max-height: calc(100vh - 80px); bottom: 10px; right: 10px; border-radius: 16px; }
+            .ai-fab { bottom: 20px; right: 20px; width: 60px; height: 60px; }
+            .ai-fab img { width: 40px; height: 40px; }
+        }
     </style>
-    <div id="hmplast-assistant-status"></div>
-    <button id="hmplast-assistant-btn" onclick="hmplastToggleCall()" title="Sesli Asistan ile Konusun">🎧</button>
-    <script>
-    (function(){
-        var PK="818a01d5-36c0-4296-90f3-97eb8918b4ba",AID="d6fe8ab1-4e37-432a-acdd-cf970363dd1b",v=null,a=false;
-        function init(){if(v)return;v=new window.Vapi(PK);
-            v.on("call-start",function(){a=true;ui("active","Ayse ile baglanti kuruldu")});
-            v.on("call-end",function(){a=false;ui("idle","")});
-            v.on("speech-start",function(){ui("active","Ayse konusuyor...")});
-            v.on("speech-end",function(){ui("active","Dinleniyor...")});
-            v.on("error",function(){a=false;ui("idle","")});
+
+    <!-- FAB Butonu -->
+    <button class="ai-fab" id="ai-fab" title="Sesli Asistan Ayşe">
+        <div class="ai-fab-glow"></div>
+        <div class="ai-fab-glow"></div>
+        <img src="/images/assistant-logo.png" alt="AI Asistan">
+    </button>
+
+    <!-- Chat Paneli -->
+    <div class="ai-chat-panel" id="ai-chat-panel">
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-avatar">
+                <img src="/images/assistant-logo.png" alt="Ayşe">
+            </div>
+            <div class="ai-chat-header-info">
+                <h4>Ayşe</h4>
+                <span id="ai-header-status">HMPLAST AI Asistan</span>
+            </div>
+            <div class="ai-chat-header-actions">
+                <button class="ai-lang-toggle" id="ai-lang-btn" title="Dil Değiştir">TR</button>
+                <button id="ai-close-btn" title="Kapat"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="ai-chat-messages" id="ai-messages"></div>
+        <div class="ai-chat-footer">
+            <input type="text" class="ai-chat-input" id="ai-input" placeholder="Mesajınızı yazın..." autocomplete="off">
+            <button class="ai-chat-send" id="ai-send-btn" title="Gönder"><i class="fas fa-paper-plane"></i></button>
+            <button class="ai-chat-mic" id="ai-mic-btn" title="Sesli Konuşma"><i class="fas fa-microphone"></i></button>
+        </div>
+    </div>
+
+    <script type="module">
+        import Vapi from "https://esm.sh/@vapi-ai/web@latest";
+
+        const PK = "818a01d5-36c0-4296-90f3-97eb8918b4ba";
+        const AID = "d6fe8ab1-4e37-432a-acdd-cf970363dd1b";
+
+        let vapiInstance = null;
+        let isCallActive = false;
+        let currentLang = "tr";
+
+        const fab = document.getElementById("ai-fab");
+        const panel = document.getElementById("ai-chat-panel");
+        const closeBtn = document.getElementById("ai-close-btn");
+        const langBtn = document.getElementById("ai-lang-btn");
+        const input = document.getElementById("ai-input");
+        const sendBtn = document.getElementById("ai-send-btn");
+        const micBtn = document.getElementById("ai-mic-btn");
+        const messagesEl = document.getElementById("ai-messages");
+        const headerStatus = document.getElementById("ai-header-status");
+
+        const i18n = {
+            tr: {
+                welcome: "Merhaba! Ben Ayşe, HMPLAST AI asistanıyım. Size nasıl yardımcı olabilirim? Yazarak veya mikrofon butonuna basarak sesli konuşabilirsiniz.",
+                placeholder: "Mesajınızı yazın...",
+                headerSub: "HMPLAST AI Asistan",
+                connecting: "Bağlanıyor...",
+                connected: "Ayşe bağlandı",
+                speaking: "Ayşe konuşuyor...",
+                listening: "Sizi dinliyorum...",
+                error: "Bağlantı hatası",
+                callEnded: "Görüşme sonlandırıldı",
+                langChanged: "Dil Türkçe olarak değiştirildi"
+            },
+            en: {
+                welcome: "Hello! I'm Ayşe, HMPLAST AI assistant. How can I help you? You can type a message or press the microphone button to talk.",
+                placeholder: "Type your message...",
+                headerSub: "HMPLAST AI Assistant",
+                connecting: "Connecting...",
+                connected: "Ayşe connected",
+                speaking: "Ayşe is speaking...",
+                listening: "Listening...",
+                error: "Connection error",
+                callEnded: "Call ended",
+                langChanged: "Language changed to English"
+            }
+        };
+
+        function t(key) { return i18n[currentLang][key] || key; }
+
+        function getVapi() {
+            if (vapiInstance) return vapiInstance;
+            try {
+                vapiInstance = new Vapi(PK);
+
+                vapiInstance.on("call-start", () => {
+                    isCallActive = true;
+                    micBtn.classList.add("recording");
+                    headerStatus.textContent = t("connected");
+                    addMessage("system", t("connected"));
+                });
+
+                vapiInstance.on("call-end", () => {
+                    isCallActive = false;
+                    micBtn.classList.remove("recording");
+                    headerStatus.textContent = t("headerSub");
+                    addMessage("system", t("callEnded"));
+                });
+
+                vapiInstance.on("speech-start", () => {
+                    headerStatus.textContent = t("speaking");
+                });
+
+                vapiInstance.on("speech-end", () => {
+                    if (isCallActive) headerStatus.textContent = t("listening");
+                });
+
+                vapiInstance.on("message", (msg) => {
+                    if (msg.type === "transcript" && msg.transcriptType === "final") {
+                        if (msg.role === "assistant") addMessage("assistant", msg.transcript);
+                        else if (msg.role === "user") addMessage("user", msg.transcript);
+                    }
+                });
+
+                vapiInstance.on("error", (e) => {
+                    const errMsg = e?.message || e?.error?.message || JSON.stringify(e) || "Bilinmeyen hata";
+                    console.error("Vapi Error:", errMsg, e);
+                    isCallActive = false;
+                    micBtn.classList.remove("recording");
+                    headerStatus.textContent = t("error");
+                    addMessage("system", t("error") + ": " + errMsg);
+                    setTimeout(() => { headerStatus.textContent = t("headerSub"); }, 4000);
+                });
+
+                return vapiInstance;
+            } catch (e) {
+                console.error("Vapi init error:", e);
+                return null;
+            }
         }
-        window.hmplastToggleCall=function(){init();if(a){v.stop();a=false;ui("idle","");}else{ui("connecting","Baglaniliyor...");v.start(AID);}};
-        function ui(s,m){var b=document.getElementById("hmplast-assistant-btn"),t=document.getElementById("hmplast-assistant-status");
-            if(s==="idle"){b.innerHTML="🎧";b.className="";b.id="hmplast-assistant-btn";t.className="";t.id="hmplast-assistant-status";}
-            else if(s==="connecting"){b.innerHTML="⏳";t.textContent=m;t.className="visible";t.id="hmplast-assistant-status";}
-            else{b.innerHTML="✕";b.className="active";b.id="hmplast-assistant-btn";t.textContent=m;t.className="visible";t.id="hmplast-assistant-status";}
+
+        function addMessage(role, text) {
+            const div = document.createElement("div");
+            div.className = `ai-msg ${role}`;
+            div.textContent = text;
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
         }
-    })();
+
+        function getOverrides() {
+            if (currentLang === "en") {
+                return {
+                    transcriber: { language: "en" },
+                    voice: { provider: "azure", voiceId: "en-US-JennyNeural" },
+                    firstMessage: "Hello! I'm Ayşe from HMPLAST. How can I help you?"
+                };
+            }
+            return undefined;
+        }
+
+        function startCall() {
+            const v = getVapi();
+            if (!v) { addMessage("system", t("error")); return; }
+            headerStatus.textContent = t("connecting");
+            micBtn.classList.add("recording");
+            const overrides = getOverrides();
+            v.start(AID, overrides).catch(err => {
+                const errMsg = err?.message || JSON.stringify(err) || "Başlatılamadı";
+                console.error("Vapi start failed:", errMsg, err);
+                micBtn.classList.remove("recording");
+                addMessage("system", t("error") + ": " + errMsg);
+                headerStatus.textContent = t("headerSub");
+            });
+        }
+
+        // Panel aç/kapa
+        fab.addEventListener("click", () => {
+            panel.classList.add("open");
+            fab.classList.add("hidden");
+            if (messagesEl.children.length === 0) addMessage("assistant", t("welcome"));
+            input.focus();
+        });
+        closeBtn.addEventListener("click", () => {
+            panel.classList.remove("open");
+            fab.classList.remove("hidden");
+        });
+
+        // Dil değiştir
+        langBtn.addEventListener("click", () => {
+            currentLang = currentLang === "tr" ? "en" : "tr";
+            langBtn.textContent = currentLang.toUpperCase();
+            input.placeholder = t("placeholder");
+            headerStatus.textContent = t("headerSub");
+            addMessage("system", t("langChanged"));
+        });
+
+        // Metin gönder
+        function sendText() {
+            const text = input.value.trim();
+            if (!text) return;
+            addMessage("user", text);
+            input.value = "";
+
+            if (isCallActive && vapiInstance) {
+                vapiInstance.send({ type: "add-message", message: { role: "user", content: text } });
+            } else {
+                const v = getVapi();
+                if (!v) { addMessage("system", t("error")); return; }
+                headerStatus.textContent = t("connecting");
+                const ov = getOverrides();
+                v.start(AID, ov).then(() => {
+                    setTimeout(() => {
+                        if (isCallActive) vapiInstance.send({ type: "add-message", message: { role: "user", content: text } });
+                    }, 2000);
+                }).catch(err => {
+                    const errMsg = err?.message || JSON.stringify(err) || "Başlatılamadı";
+                    console.error("Vapi start failed:", errMsg, err);
+                    addMessage("system", t("error") + ": " + errMsg);
+                    headerStatus.textContent = t("headerSub");
+                });
+            }
+        }
+
+        sendBtn.addEventListener("click", sendText);
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); }
+        });
+
+        // Sesli görüşme toggle
+        micBtn.addEventListener("click", () => {
+            if (isCallActive) {
+                const v = getVapi();
+                if (v) v.stop();
+            } else {
+                startCall();
+            }
+        });
+
+        input.placeholder = t("placeholder");
+        console.log("YZ Asistan: SDK Hazır.");
     </script>
     <!-- /HM Plast Sesli Asistan -->
 </body>
